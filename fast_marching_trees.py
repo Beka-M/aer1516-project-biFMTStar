@@ -16,7 +16,7 @@ from matplotlib import animation, rc
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) +
                 "/../../Sampling_based_Planning/")
 
-from Sampling_based_Planning.rrt_2D import env, plotting, utils
+import env, plotting, utils
 
 
 class Node:
@@ -49,7 +49,7 @@ class FMT:
         self.V_unvisited = set()
         self.V_open = set()
         self.V_closed = set()
-        self.sample_numbers = 6000
+        self.sample_numbers = 1000
 
     def Init(self):
         samples = self.SampleFree()
