@@ -109,7 +109,7 @@ class FMT:
         print('cost: ', self.x_meet.cost[0]+self.x_meet.cost[1])   # total cost of the final path (need to double-check this)
         print('Collison checks: ', self.coll_check)
         path_x, path_y = self.ExtractPath()
-        self.animation(path_x, path_y, Visited[1: len(Visited)])
+        self.animation(path_x, path_y, Visited[2: len(Visited)])
         # anim = animation.FuncAnimation(self.fig, self.animation(path_x, path_y, Visited[1: len(Visited)]), frames=10, interval=10, blit=True)
         # anim.save('fmt_animation.gif', writer="PillowWriter", fps=60)
 
@@ -215,19 +215,28 @@ class FMT:
         for node in self.V[0]:
             plt.plot(node.x, node.y, marker='.', color='lightgrey', markersize=3)
 
-        # count = 0
-        # for node in visited:
-        #     count += 1
-        #     plt.plot([node.x, node.parent[self.tree].x], [node.y, node.parent[self.tree].y], '-g')
-        #     plt.gcf().canvas.mpl_connect(
-        #         'key_release_event',
-        #         lambda event: [exit(0) if event.key == 'escape' else None])
-        #     if count % 10 == 0:
-        #         plt.pause(0.001)
+        count = 0
+        for node in visited:
+            count += 1
+            if node.parent[0] and node.parent[1]:
+                print(node, node.parent)
+            if node.parent[0]:
+                x = node.parent[0].x
+                y = node.parent[0].y
+            else:
+                x = node.parent[1].x
+                y = node.parent[1].y
+            plt.plot([node.x, x], [node.y, y], '-g')
+            plt.gcf().canvas.mpl_connect(
+                'key_release_event',
+                lambda event: [exit(0) if event.key == 'escape' else None])
+            if count % 10 == 0:
+                plt.pause(0.001)
+
         print('path x:', path_x)
         print('path y:', path_y)
         plt.plot(path_x, path_y, linewidth=2, color='red')
-        # plt.pause(0.01)
+        plt.pause(0.01)
         plt.show()
 
     def plot_grid(self, name):
