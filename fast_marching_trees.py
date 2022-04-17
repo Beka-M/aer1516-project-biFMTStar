@@ -105,6 +105,7 @@ class FMT:
         print('collison checks: ', self.coll_checks)
         # node_end = self.ChooseGoalPoint()
         path_x, path_y = self.ExtractPath()
+        print(path_x, path_y)
         self.animation(path_x, path_y, Visited[1: len(Visited)])
         # anim = animation.FuncAnimation(self.fig, self.animation(path_x, path_y, Visited[1: len(Visited)]), frames=10, interval=10, blit=True)
         # anim.save('fmt_animation.gif', writer="PillowWriter", fps=60)

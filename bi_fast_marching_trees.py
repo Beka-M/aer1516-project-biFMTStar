@@ -81,11 +81,11 @@ class FMT:
         rn = self.search_radius * math.sqrt((math.log(n) / n))
 
         z = self.x_init
-        Visited = []
+        Visited = {0: [], 1: []}
 
         # while self.x_meet.x == -1:   # faster but not optimal, returns the first feasible path
         while z not in self.V_closed[not self.tree]:    # slower but seems to return optimal path as written in the paper
-            Visited = self.ExpandTreeFromNode(z, rn, Visited)
+            Visited[self.tree] = self.ExpandTreeFromNode(z, rn, Visited[self.tree])
 
             if not self.V_open[0] and not self.V_open[1]:
                 print("Both open set empty!")
@@ -109,8 +109,8 @@ class FMT:
         print('cost: ', self.x_meet.cost[0]+self.x_meet.cost[1])   # total cost of the final path (need to double-check this)
         print('Collison checks: ', self.coll_check)
         path_x, path_y = self.ExtractPath()
-        self.animation(path_x, path_y, Visited[2: len(Visited)])
-        # anim = animation.FuncAnimation(self.fig, self.animation(path_x, path_y, Visited[1: len(Visited)]), frames=10, interval=10, blit=True)
+        self.animation(path_x, path_y, Visited)
+        # anim = animation.FuncAnimation(self.fig, self.animation(path_x, path_y, Visited[2: len(Visited)]), frames=10, interval=10, blit=True)
         # anim.save('fmt_animation.gif', writer="PillowWriter", fps=60)
 
     def ExpandTreeFromNode(self, z, rn, Visited):
@@ -160,18 +160,20 @@ class FMT:
             B_y.append(node.y)
             node = node.parent[self.tree]
 
-        path_x.append(self.x_goal.x)
-        path_y.append(self.x_goal.y)
-        B_x.reverse(), B_y.reverse()
-        B_x.pop(-1), B_y.pop(-1)
-        for x in B_x:
-            path_x.append(x)
-        for y in B_y:
-            path_y.append(y)
-        for x in F_x:
-            path_x.append(x)
-        for y in F_y:
-            path_y.append(y)
+        if B_x:
+            path_x.append(self.x_goal.x)
+            path_y.append(self.x_goal.y)
+            B_x.reverse(), B_y.reverse()
+            B_x.pop(-1), B_y.pop(-1)
+            for x in B_x:
+                path_x.append(x)
+            for y in B_y:
+                path_y.append(y)
+        if F_x:
+            for x in F_x:
+                path_x.append(x)
+            for y in F_y:
+                path_y.append(y)
         path_x.append(self.x_init.x)
         path_y.append(self.x_init.y)
 
@@ -216,17 +218,22 @@ class FMT:
             plt.plot(node.x, node.y, marker='.', color='lightgrey', markersize=3)
 
         count = 0
-        for node in visited:
+        for i in range(1, len(visited[0])):
             count += 1
-            if node.parent[0] and node.parent[1]:
-                print(node, node.parent)
-            if node.parent[0]:
-                x = node.parent[0].x
-                y = node.parent[0].y
-            else:
-                x = node.parent[1].x
-                y = node.parent[1].y
-            plt.plot([node.x, x], [node.y, y], '-g')
+            x = visited[0][i].parent[0].x
+            y = visited[0][i].parent[0].y
+            plt.plot([visited[0][i].x, x], [visited[0][i].y, y], '-g')
+            plt.gcf().canvas.mpl_connect(
+                'key_release_event',
+                lambda event: [exit(0) if event.key == 'escape' else None])
+            if count % 10 == 0:
+                plt.pause(0.001)
+
+        for j in range(1, len(visited[1])):
+            count += 1
+            x = visited[1][j].parent[1].x
+            y = visited[1][j].parent[1].y
+            plt.plot([visited[1][j].x, x], [visited[1][j].y, y], '-b')
             plt.gcf().canvas.mpl_connect(
                 'key_release_event',
                 lambda event: [exit(0) if event.key == 'escape' else None])
@@ -279,8 +286,8 @@ class FMT:
 
 
 def main():
-    x_start = (18, 8)  # Starting node
-    x_goal = (37, 18)  # Goal node
+    x_start = (6, 6)  # Starting node
+    x_goal = (40, 25)  # Goal node
     # x_start = (2, 2)
     # x_goal = (47, 27)
 
