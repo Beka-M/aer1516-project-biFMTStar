@@ -51,7 +51,8 @@ class FMT:
         self.V_closed = set()
         self.sample_numbers = n
         self.coll_checks = 0
-        self.fail = False
+        self.success = True
+        self.time_elapsed = 0
 
     def Init(self):
         samples = self.SampleFree()
@@ -94,13 +95,14 @@ class FMT:
 
             if not self.V_open:
                 print("open set empty!")
-                self.fail = True
+                self.success = False
                 break
 
             cost_open = {y: y.cost for y in self.V_open}
             z = min(cost_open, key=cost_open.get)
 
-        print('time elapsed: ', time.time()-start_t)
+        self.time_elapsed = time.time()-start_t
+        print('time elapsed: ', self.time_elapsed)
         print('cost', self.x_goal.cost)
         print('collison checks: ', self.coll_checks)
         # node_end = self.ChooseGoalPoint()
@@ -181,7 +183,7 @@ class FMT:
 
         plt.plot(path_x, path_y, linewidth=2, color='red')
         plt.pause(0.01)
-        plt.show()
+        # plt.show()
 
     def plot_grid(self, name):
 
@@ -223,19 +225,43 @@ class FMT:
 
 
 def main():
-    x_start = (18, 8)  # Starting node
-    x_goal = (37, 18)  # Goal node
-    # x_start = (2, 2)
-    # x_goal = (47, 27)
+        x_start = (6, 6)  # Starting node
+        x_goal = (40, 25)  # Goal node
+        # x_start = (2, 2)
+        # x_goal = (47, 27)
 
-    fmt = FMT(x_start, x_goal, 40, 1000)
-    # fmt.plot_grid("Fast Marching Trees (FMT*)")
-    # plt.show()
-    fmt.Planning()
-    if fmt.fail:
-        print('Failed to return path')
-    else:
-        print('Success!!!')
+        col_check_res = []
+        cost_res = []
+        time_elp_res = []
+        suc_rate_res = []
+        sample_n = [500, 1000, 1500, 2000, 2500, 3000]
+        for n in sample_n:
+            col_check = 0
+            cost = 0
+            time_elp = 0
+            suc_rate = 0
+            for run in range(10):
+                fmt = FMT(x_start, x_goal, 40, n)
+                # fmt.plot_grid("Bidirectional Fast Marching Trees (Bi-FMT*)")
+                # plt.show()
+                fmt.Planning()
+
+                if fmt.success:
+                    suc_rate += fmt.success
+                    time_elp += fmt.time_elapsed
+                    cost += fmt.x_goal.cost
+                    col_check += fmt.coll_checks
+
+            time_elp = time_elp / suc_rate
+            time_elp_res.append(time_elp)
+            cost = cost / suc_rate
+            cost_res.append(cost)
+            col_check = col_check / suc_rate
+            col_check_res.append(col_check)
+            suc_rate = suc_rate / 10
+            suc_rate_res.append(suc_rate)
+
+        return time_elp_res, cost_res, col_check_res, suc_rate_res
 
 
 if __name__ == '__main__':

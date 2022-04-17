@@ -11,7 +11,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import time
-import itertools
 from matplotlib import animation, rc
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) +
@@ -55,7 +54,8 @@ class FMT:
         self.sample_numbers = n
         self.tree = 0   # 1: use forward tree; 0: use backward tree
         self.coll_check = 0   # Record number of collision checks have done
-        self.fail = False   # To compute success rate
+        self.success = True   # To compute success rate
+        self.time_elapsed = 0
 
     def Init(self):
         samples = self.SampleFree()
@@ -89,7 +89,7 @@ class FMT:
 
             if not self.V_open[0] and not self.V_open[1]:
                 print("Both open set empty!")
-                self.fail = True
+                self.success = False
                 break
 
             if not self.V_closed[1]:
@@ -105,7 +105,8 @@ class FMT:
                 cost_open = {y: y.cost[self.tree] for y in self.V_open[self.tree]}
                 z = min(cost_open, key=cost_open.get)
 
-        print('time elapsed: ', time.time()-start_t)
+        self.time_elapsed = time.time()-start_t
+        print('time elapsed: ', self.time_elapsed)
         print('cost: ', self.x_meet.cost[0]+self.x_meet.cost[1])   # total cost of the final path (need to double-check this)
         print('Collison checks: ', self.coll_check)
         path_x, path_y = self.ExtractPath()
@@ -140,7 +141,7 @@ class FMT:
         self.V_open[self.tree].update(V_open_new)
         self.V_open[self.tree].remove(z)
         self.V_closed[self.tree].add(z)
-        print(self.tree, z.x, z.y)
+        # print(self.tree, z.x, z.y)
         return Visited
 
     def ExtractPath(self):
@@ -212,7 +213,7 @@ class FMT:
         return Sample
 
     def animation(self, path_x, path_y, visited):
-        self.plot_grid("Fast Marching Trees (FMT*)")
+        self.plot_grid("Bidirectional Fast Marching Trees (FMT*)")
 
         for node in self.V[0]:
             plt.plot(node.x, node.y, marker='.', color='lightgrey', markersize=3)
@@ -244,7 +245,7 @@ class FMT:
         print('path y:', path_y)
         plt.plot(path_x, path_y, linewidth=2, color='red')
         plt.pause(0.01)
-        plt.show()
+        # plt.show()
 
     def plot_grid(self, name):
 
@@ -291,14 +292,38 @@ def main():
     # x_start = (2, 2)
     # x_goal = (47, 27)
 
-    fmt = FMT(x_start, x_goal, 40, 1000)
-    # fmt.plot_grid("Fast Marching Trees (FMT*)")
-    # plt.show()
-    fmt.Planning()
-    if fmt.fail:
-        print('Failed to return path')
-    else:
-        print('Success!!!')
+    col_check_res = []
+    cost_res = []
+    time_elp_res = []
+    suc_rate_res = []
+    sample_n = [500, 1000, 1500, 2000, 2500, 3000]
+    for n in sample_n:
+        col_check = 0
+        cost = 0
+        time_elp = 0
+        suc_rate = 0
+        for run in range(10):
+            fmt = FMT(x_start, x_goal, 40, n)
+            # fmt.plot_grid("Bidirectional Fast Marching Trees (Bi-FMT*)")
+            # plt.show()
+            fmt.Planning()
+
+            if fmt.success:
+                suc_rate += fmt.success
+                time_elp += fmt.time_elapsed
+                cost += (fmt.x_meet.cost[0] + fmt.x_meet.cost[1])
+                col_check += fmt.coll_check
+
+        time_elp = time_elp / suc_rate
+        time_elp_res.append(time_elp)
+        cost = cost / suc_rate
+        cost_res.append(cost)
+        col_check = col_check / suc_rate
+        col_check_res.append(col_check)
+        suc_rate = suc_rate / 10
+        suc_rate_res.append(suc_rate)
+
+    return time_elp_res, cost_res, col_check_res, suc_rate_res
 
 
 if __name__ == '__main__':
