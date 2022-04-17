@@ -11,6 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import time
+import itertools
 from matplotlib import animation, rc
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) +
@@ -23,14 +24,15 @@ class Node:
     def __init__(self, n):
         self.x = n[0]
         self.y = n[1]
-        self.parent = None
-        self.cost = np.inf
+        self.parent = {0: None, 1: None}
+        self.cost = {0: np.inf, 1: np.inf}
 
 
 class FMT:
     def __init__(self, x_start, x_goal, search_radius):
         self.x_init = Node(x_start)
         self.x_goal = Node(x_goal)
+        self.x_meet = Node((-1, -1))
         self.search_radius = search_radius
 
         self.env = env.Env()
@@ -45,80 +47,126 @@ class FMT:
         self.obs_rectangle = self.env.obs_rectangle
         self.obs_boundary = self.env.obs_boundary
 
-        self.V = set()
-        self.V_unvisited = set()
-        self.V_open = set()
-        self.V_closed = set()
+        self.V = {0: set(), 1: set()}
+        self.V_unvisited = {0: set(), 1: set()}
+        self.V_open = {0: set(), 1: set()}
+        self.V_closed = {0: set(), 1: set()}
+
         self.sample_numbers = 1000
+        self.tree = 0   # 1: use forward tree; 0: use backward tree
+        self.coll_check = 0   # Record number of collision checks have done
 
     def Init(self):
         samples = self.SampleFree()
 
-        self.x_init.cost = 0.0
-        self.V.add(self.x_init)
-        self.V.update(samples)
-        self.V_unvisited.update(samples)
-        self.V_unvisited.add(self.x_goal)
-        self.V_open.add(self.x_init)
+        self.x_init.cost[0] = 0.0
+        self.V[0].add(self.x_init)
+        self.V[0].update(samples)
+        self.V_unvisited[0].update(samples)
+        # self.VF_unvisited.add(self.x_goal)
+        self.V_open[0].add(self.x_init)
+
+        self.x_goal.cost[1] = 0.0
+        self.V[1].add(self.x_goal)
+        self.V[1].update(samples)
+        self.V_unvisited[1].update(samples)
+        # self.VB_unvisited.add(self.x_goal)
+        self.V_open[1].add(self.x_goal)
 
     def Planning(self):
         start_t = time.time()
         self.Init()
-        z = self.x_init
         n = self.sample_numbers
         rn = self.search_radius * math.sqrt((math.log(n) / n))
+
+        z = self.x_init
         Visited = []
 
-        while z is not self.x_goal:
-            V_open_new = set()
-            X_near = self.Near(self.V_unvisited, z, rn)
-            Visited.append(z)
+        while self.x_meet.x == -1:
+            Visited = self.ExpandTreeFromNode(z, rn, Visited)
 
-            for x in X_near:
-                Y_near = self.Near(self.V_open, x, rn)
-                cost_list = {y: y.cost + self.Cost(y, x) for y in Y_near}
-                y_min = min(cost_list, key=cost_list.get)
-
-                if not self.utils.is_collision(y_min, x):
-                    x.parent = y_min
-                    V_open_new.add(x)
-                    self.V_unvisited.remove(x)
-                    x.cost = y_min.cost + self.Cost(y_min, x)
-
-            self.V_open.update(V_open_new)
-            self.V_open.remove(z)
-            self.V_closed.add(z)
-
-            if not self.V_open:
-                print("open set empty!")
+            if not self.V_open[0] and not self.V_open[1]:
+                print("Both open set empty!")
                 break
 
-            cost_open = {y: y.cost for y in self.V_open}
-            z = min(cost_open, key=cost_open.get)
+            if not self.V_closed[1]:
+                self.tree = not self.tree
+                z = self.x_goal
+                continue
+
+            if not self.V_open[not self.tree]:
+                cost_open = {y: y.cost[self.tree] for y in self.V_open[self.tree]}
+                z = min(cost_open, key=cost_open.get)
+            else:
+                self.tree = not self.tree
+                cost_open = {y: y.cost[self.tree] for y in self.V_open[self.tree]}
+                z = min(cost_open, key=cost_open.get)
 
         print('time elapsed: ', time.time()-start_t)
-        # node_end = self.ChooseGoalPoint()
         path_x, path_y = self.ExtractPath()
         self.animation(path_x, path_y, Visited[1: len(Visited)])
         # anim = animation.FuncAnimation(self.fig, self.animation(path_x, path_y, Visited[1: len(Visited)]), frames=10, interval=10, blit=True)
         # anim.save('fmt_animation.gif', writer="PillowWriter", fps=60)
 
+    def ExpandTreeFromNode(self, z, rn, Visited):
+        V_open_new = set()
+        X_near = self.Near(self.V_unvisited[self.tree], z, rn)
+        Visited.append(z)
 
-    def ChooseGoalPoint(self):
-        Near = self.Near(self.V, self.x_goal, 2.0)
-        cost = {y: y.cost + self.Cost(y, self.x_goal) for y in Near}
+        for x in X_near:
+            Y_near = self.Near(self.V_open[self.tree], x, rn)
+            cost_list = {y: y.cost[self.tree] + self.Cost(y, x) for y in Y_near}
+            y_min = min(cost_list, key=cost_list.get)
 
-        return min(cost, key=cost.get)
+            self.coll_check += 1
+            if not self.utils.is_collision(y_min, x):
+                x.parent[self.tree] = y_min
+                V_open_new.add(x)
+                self.V_unvisited[self.tree].remove(x)
+                x.cost[self.tree] = y_min.cost[self.tree] + self.Cost(y_min, x)
+
+                if x not in self.V_unvisited[not self.tree]:
+                    if self.x_meet.x == -1:
+                        self.x_meet = x
+                    else:
+                        if (self.x_meet.cost[0] + self.x_meet.cost[1]) > (x.cost[0] + x.cost[1]):
+                            self.x_meet = x
+
+        self.V_open[self.tree].update(V_open_new)
+        self.V_open[self.tree].remove(z)
+        self.V_closed[self.tree].add(z)
+        print(self.tree, z.x, z.y)
+        return Visited
 
     def ExtractPath(self):
-        path_x, path_y = [], []
-        node = self.x_goal
+        path_x, path_y, F_x, F_y, B_x, B_y = [], [], [], [], [], []
 
-        while node.parent:
-            path_x.append(node.x)
-            path_y.append(node.y)
-            node = node.parent
+        self.tree = 0
+        node = self.x_meet
+        while node.parent[self.tree]:
+            F_x.append(node.x)
+            F_y.append(node.y)
+            node = node.parent[self.tree]
 
+        self.tree = 1
+        node = self.x_meet
+        while node.parent[self.tree]:
+            B_x.append(node.x)
+            B_y.append(node.y)
+            node = node.parent[self.tree]
+
+        path_x.append(self.x_goal.x)
+        path_y.append(self.x_goal.y)
+        B_x.reverse(), B_y.reverse()
+        B_x.pop(-1), B_y.pop(-1)
+        for x in B_x:
+            path_x.append(x)
+        for y in B_y:
+            path_y.append(y)
+        for x in F_x:
+            path_x.append(x)
+        for y in F_y:
+            path_y.append(y)
         path_x.append(self.x_init.x)
         path_y.append(self.x_init.y)
 
@@ -159,21 +207,22 @@ class FMT:
     def animation(self, path_x, path_y, visited):
         self.plot_grid("Fast Marching Trees (FMT*)")
 
-        for node in self.V:
+        for node in self.V[0]:
             plt.plot(node.x, node.y, marker='.', color='lightgrey', markersize=3)
 
-        count = 0
-        for node in visited:
-            count += 1
-            plt.plot([node.x, node.parent.x], [node.y, node.parent.y], '-g')
-            plt.gcf().canvas.mpl_connect(
-                'key_release_event',
-                lambda event: [exit(0) if event.key == 'escape' else None])
-            if count % 10 == 0:
-                plt.pause(0.001)
-
+        # count = 0
+        # for node in visited:
+        #     count += 1
+        #     plt.plot([node.x, node.parent[self.tree].x], [node.y, node.parent[self.tree].y], '-g')
+        #     plt.gcf().canvas.mpl_connect(
+        #         'key_release_event',
+        #         lambda event: [exit(0) if event.key == 'escape' else None])
+        #     if count % 10 == 0:
+        #         plt.pause(0.001)
+        print('x:', path_x)
+        print('y:', path_y)
         plt.plot(path_x, path_y, linewidth=2, color='red')
-        plt.pause(0.01)
+        # plt.pause(0.01)
         plt.show()
 
     def plot_grid(self, name):
