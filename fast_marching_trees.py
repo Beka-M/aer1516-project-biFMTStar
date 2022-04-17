@@ -28,7 +28,7 @@ class Node:
 
 
 class FMT:
-    def __init__(self, x_start, x_goal, search_radius):
+    def __init__(self, x_start, x_goal, search_radius, n):
         self.x_init = Node(x_start)
         self.x_goal = Node(x_goal)
         self.search_radius = search_radius
@@ -49,7 +49,9 @@ class FMT:
         self.V_unvisited = set()
         self.V_open = set()
         self.V_closed = set()
-        self.sample_numbers = 1000
+        self.sample_numbers = n
+        self.coll_checks = 0
+        self.fail = False
 
     def Init(self):
         samples = self.SampleFree()
@@ -79,6 +81,7 @@ class FMT:
                 cost_list = {y: y.cost + self.Cost(y, x) for y in Y_near}
                 y_min = min(cost_list, key=cost_list.get)
 
+                self.coll_checks += 1
                 if not self.utils.is_collision(y_min, x):
                     x.parent = y_min
                     V_open_new.add(x)
@@ -91,12 +94,15 @@ class FMT:
 
             if not self.V_open:
                 print("open set empty!")
+                self.fail = True
                 break
 
             cost_open = {y: y.cost for y in self.V_open}
             z = min(cost_open, key=cost_open.get)
 
         print('time elapsed: ', time.time()-start_t)
+        print('cost', self.x_goal.cost)
+        print('collison checks: ', self.coll_checks)
         # node_end = self.ChooseGoalPoint()
         path_x, path_y = self.ExtractPath()
         self.animation(path_x, path_y, Visited[1: len(Visited)])
@@ -221,10 +227,14 @@ def main():
     # x_start = (2, 2)
     # x_goal = (47, 27)
 
-    fmt = FMT(x_start, x_goal, 40)
+    fmt = FMT(x_start, x_goal, 40, 1000)
     # fmt.plot_grid("Fast Marching Trees (FMT*)")
     # plt.show()
     fmt.Planning()
+    if fmt.fail:
+        print('Failed to return path')
+    else:
+        print('Success!!!')
 
 
 if __name__ == '__main__':

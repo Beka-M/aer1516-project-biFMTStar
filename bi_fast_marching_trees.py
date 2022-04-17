@@ -29,7 +29,7 @@ class Node:
 
 
 class FMT:
-    def __init__(self, x_start, x_goal, search_radius):
+    def __init__(self, x_start, x_goal, search_radius, n):
         self.x_init = Node(x_start)
         self.x_goal = Node(x_goal)
         self.x_meet = Node((-1, -1))
@@ -52,9 +52,10 @@ class FMT:
         self.V_open = {0: set(), 1: set()}
         self.V_closed = {0: set(), 1: set()}
 
-        self.sample_numbers = 1000
+        self.sample_numbers = n
         self.tree = 0   # 1: use forward tree; 0: use backward tree
         self.coll_check = 0   # Record number of collision checks have done
+        self.fail = False   # To compute success rate
 
     def Init(self):
         samples = self.SampleFree()
@@ -82,11 +83,13 @@ class FMT:
         z = self.x_init
         Visited = []
 
-        while self.x_meet.x == -1:
+        # while self.x_meet.x == -1:   # faster but not optimal, returns the first feasible path
+        while z not in self.V_closed[not self.tree]:    # slower but seems to return optimal path as written in the paper
             Visited = self.ExpandTreeFromNode(z, rn, Visited)
 
             if not self.V_open[0] and not self.V_open[1]:
                 print("Both open set empty!")
+                self.fail = True
                 break
 
             if not self.V_closed[1]:
@@ -103,6 +106,8 @@ class FMT:
                 z = min(cost_open, key=cost_open.get)
 
         print('time elapsed: ', time.time()-start_t)
+        print('cost: ', self.x_meet.cost[0]+self.x_meet.cost[1])   # total cost of the final path (need to double-check this)
+        print('Collison checks: ', self.coll_check)
         path_x, path_y = self.ExtractPath()
         self.animation(path_x, path_y, Visited[1: len(Visited)])
         # anim = animation.FuncAnimation(self.fig, self.animation(path_x, path_y, Visited[1: len(Visited)]), frames=10, interval=10, blit=True)
@@ -219,8 +224,8 @@ class FMT:
         #         lambda event: [exit(0) if event.key == 'escape' else None])
         #     if count % 10 == 0:
         #         plt.pause(0.001)
-        print('x:', path_x)
-        print('y:', path_y)
+        print('path x:', path_x)
+        print('path y:', path_y)
         plt.plot(path_x, path_y, linewidth=2, color='red')
         # plt.pause(0.01)
         plt.show()
@@ -270,10 +275,14 @@ def main():
     # x_start = (2, 2)
     # x_goal = (47, 27)
 
-    fmt = FMT(x_start, x_goal, 40)
+    fmt = FMT(x_start, x_goal, 40, 1000)
     # fmt.plot_grid("Fast Marching Trees (FMT*)")
     # plt.show()
     fmt.Planning()
+    if fmt.fail:
+        print('Failed to return path')
+    else:
+        print('Success!!!')
 
 
 if __name__ == '__main__':
