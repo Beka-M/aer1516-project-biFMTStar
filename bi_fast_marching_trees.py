@@ -245,6 +245,7 @@ class FMT:
         print('path y:', path_y)
         plt.plot(path_x, path_y, linewidth=2, color='red')
         plt.pause(0.01)
+        plt.close()
         # plt.show()
 
     def plot_grid(self, name):
@@ -287,7 +288,8 @@ class FMT:
 
 
 def main():
-    x_start = (6, 6)  # Starting node
+    # x_start = (6, 6)  # Starting node
+    x_start = (18, 8)
     x_goal = (40, 25)  # Goal node
     # x_start = (2, 2)
     # x_goal = (47, 27)
@@ -302,7 +304,8 @@ def main():
         cost = 0
         time_elp = 0
         suc_rate = 0
-        for run in range(10):
+        for run in range(100):
+            print(n, run)
             fmt = FMT(x_start, x_goal, 40, n)
             # fmt.plot_grid("Bidirectional Fast Marching Trees (Bi-FMT*)")
             # plt.show()
@@ -314,14 +317,20 @@ def main():
                 cost += (fmt.x_meet.cost[0] + fmt.x_meet.cost[1])
                 col_check += fmt.coll_check
 
-        time_elp = time_elp / suc_rate
-        time_elp_res.append(time_elp)
-        cost = cost / suc_rate
-        cost_res.append(cost)
-        col_check = col_check / suc_rate
-        col_check_res.append(col_check)
-        suc_rate = suc_rate / 10
-        suc_rate_res.append(suc_rate)
+        if suc_rate:
+            time_elp = time_elp / suc_rate
+            time_elp_res.append(time_elp)
+            cost = cost / suc_rate
+            cost_res.append(cost)
+            col_check = col_check / suc_rate
+            col_check_res.append(col_check)
+            suc_rate = suc_rate / 10
+            suc_rate_res.append(suc_rate)
+        else:
+            time_elp_res.append(np.inf)
+            cost_res.append(np.inf)
+            col_check_res.append(np.inf)
+            suc_rate_res.append(0)
 
     return time_elp_res, cost_res, col_check_res, suc_rate_res
 
