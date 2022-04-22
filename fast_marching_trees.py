@@ -109,9 +109,6 @@ class FMT:
         path_x, path_y = self.ExtractPath()
         print(path_x, path_y)
         self.animation(path_x, path_y, Visited[1: len(Visited)])
-        # anim = animation.FuncAnimation(self.fig, self.animation(path_x, path_y, Visited[1: len(Visited)]), frames=10, interval=10, blit=True)
-        # anim.save('fmt_animation.gif', writer="PillowWriter", fps=60)
-
 
     def ChooseGoalPoint(self):
         Near = self.Near(self.V, self.x_goal, 2.0)
@@ -183,8 +180,8 @@ class FMT:
 
         plt.plot(path_x, path_y, linewidth=2, color='red')
         plt.pause(0.01)
-        plt.close()
-        # plt.show()
+        # plt.close()
+        plt.show()
 
     def plot_grid(self, name):
 
@@ -249,8 +246,6 @@ def main():
             for run in range(100):
                 print(n, run)
                 fmt = FMT(x_start, x_goal, 40, n)
-                # fmt.plot_grid("Bidirectional Fast Marching Trees (Bi-FMT*)")
-                # plt.show()
                 fmt.Planning()
 
                 if fmt.success:
@@ -266,7 +261,7 @@ def main():
                 cost_res.append(cost)
                 col_check = col_check / suc_rate
                 col_check_res.append(col_check)
-                suc_rate = suc_rate / 10
+                suc_rate = suc_rate / 100
                 suc_rate_res.append(suc_rate)
             else:
                 time_elp_res.append(np.inf)

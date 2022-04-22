@@ -1,8 +1,3 @@
-"""
-Fast Marching Trees (FMT*)
-@author: huiming zhou
-"""
-
 import os
 import sys
 import math
@@ -64,14 +59,12 @@ class FMT:
         self.V[0].add(self.x_init)
         self.V[0].update(samples)
         self.V_unvisited[0].update(samples)
-        # self.VF_unvisited.add(self.x_goal)
         self.V_open[0].add(self.x_init)
 
         self.x_goal.cost[1] = 0.0
         self.V[1].add(self.x_goal)
         self.V[1].update(samples)
         self.V_unvisited[1].update(samples)
-        # self.VB_unvisited.add(self.x_goal)
         self.V_open[1].add(self.x_goal)
 
     def Planning(self):
@@ -141,7 +134,6 @@ class FMT:
         self.V_open[self.tree].update(V_open_new)
         self.V_open[self.tree].remove(z)
         self.V_closed[self.tree].add(z)
-        # print(self.tree, z.x, z.y)
         return Visited
 
     def ExtractPath(self):
@@ -245,8 +237,8 @@ class FMT:
         print('path y:', path_y)
         plt.plot(path_x, path_y, linewidth=2, color='red')
         plt.pause(0.01)
-        plt.close()
-        # plt.show()
+        # plt.close()
+        plt.show()
 
     def plot_grid(self, name):
 
@@ -293,6 +285,8 @@ def main():
     x_goal = (40, 25)  # Goal node
     # x_start = (2, 2)
     # x_goal = (47, 27)
+    # fmt.plot_grid("Bidirectional Fast Marching Trees (Bi-FMT*)")
+    # plt.show()
 
     col_check_res = []
     cost_res = []
@@ -307,8 +301,6 @@ def main():
         for run in range(100):
             print(n, run)
             fmt = FMT(x_start, x_goal, 40, n)
-            # fmt.plot_grid("Bidirectional Fast Marching Trees (Bi-FMT*)")
-            # plt.show()
             fmt.Planning()
 
             if fmt.success:
@@ -324,7 +316,7 @@ def main():
             cost_res.append(cost)
             col_check = col_check / suc_rate
             col_check_res.append(col_check)
-            suc_rate = suc_rate / 10
+            suc_rate = suc_rate / 100
             suc_rate_res.append(suc_rate)
         else:
             time_elp_res.append(np.inf)
